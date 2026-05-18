@@ -100,11 +100,18 @@ class BtcWatchFaceRenderer(
 
     init {
         scope.launch {
+            watchState.isVisible.collect { isVisible ->
+                if (isVisible == true) {
+                    fetchBtcPrice()
+                }
+            }
+        }
+        scope.launch {
             while (true) {
+                delay(5 * 60 * 1000L) // Fetch every 5 minutes
                 if (watchState.isVisible.value == true) {
                     fetchBtcPrice()
                 }
-                delay(5 * 60 * 1000L) // Fetch every 5 minutes
             }
         }
     }
@@ -117,6 +124,7 @@ class BtcWatchFaceRenderer(
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val reader = BufferedReader(InputStreamReader(connection.inputStream))
@@ -127,9 +135,14 @@ class BtcWatchFaceRenderer(
                     val priceFloat = priceStr.toFloat()
                     btcPrice = String.format("€%.2f", priceFloat)
                     invalidate()
+                } else {
+                    btcPrice = "Error: ${connection.responseCode}"
+                    invalidate()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                btcPrice = "Error"
+                invalidate()
             }
         }
     }
