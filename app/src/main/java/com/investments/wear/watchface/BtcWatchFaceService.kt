@@ -76,10 +76,18 @@ class BtcWatchFaceRenderer(
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var btcPrice: String = "Loading..."
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d")
 
     private val timePaint = Paint().apply {
         color = Color.WHITE
         textSize = 40f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val datePaint = Paint().apply {
+        color = Color.LTGRAY
+        textSize = 22f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
     }
@@ -156,13 +164,17 @@ class BtcWatchFaceRenderer(
 
         // Time (Top, small)
         val timeText = zonedDateTime.format(timeFormatter)
-        canvas.drawText(timeText, centerX, centerY - 40f, timePaint)
+        canvas.drawText(timeText, centerX, centerY - 55f, timePaint)
+
+        // Date (Beneath clock)
+        val dateText = zonedDateTime.format(dateFormatter)
+        canvas.drawText(dateText, centerX, centerY - 15f, datePaint)
 
         // BTC Label
-        canvas.drawText("BTC / EUR", centerX, centerY + 10f, labelPaint)
+        canvas.drawText("BTC / EUR", centerX, centerY + 25f, labelPaint)
 
         // BTC Price (Below)
-        canvas.drawText(btcPrice, centerX, centerY + 60f, pricePaint)
+        canvas.drawText(btcPrice, centerX, centerY + 75f, pricePaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
