@@ -106,11 +106,20 @@ class BtcWatchFaceRenderer(
         textAlign = Paint.Align.CENTER
     }
 
+    private var t212Returns: String = "T212: Loading..."
+    private val t212Paint = Paint().apply {
+        color = Color.GREEN
+        textSize = 35f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+    }
+
     init {
         scope.launch {
             watchState.isVisible.collect { isVisible ->
                 if (isVisible == true) {
                     fetchBtcPrice()
+                    fetchT212Returns()
                 }
             }
         }
@@ -119,6 +128,7 @@ class BtcWatchFaceRenderer(
                 delay(5 * 60 * 1000L) // Fetch every 5 minutes
                 if (watchState.isVisible.value == true) {
                     fetchBtcPrice()
+                    fetchT212Returns()
                 }
             }
         }
@@ -155,6 +165,52 @@ class BtcWatchFaceRenderer(
         }
     }
 
+    private suspend fun fetchT212Returns() {
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://live.trading212.com/api/v0/equity/account/cash")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                
+                val apiKey = "45396063ZCuCwUwftfveQUgPrhVgxmwvgjcxm"
+                val apiSecret = "tEo_5iz09reOThZFF9dKE_GVS49AbwfGW1ZIt6ledPA"
+                val credentials = "$apiKey:$apiSecret"
+                val basicAuth = "Basic " + android.util.Base64.encodeToString(credentials.toByteArray(), android.util.Base64.NO_WRAP)
+                
+                connection.setRequestProperty("Authorization", basicAuth)
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    val response = reader.readText()
+                    reader.close()
+                    val jsonObject = JSONObject(response)
+                    
+                    var returns = 0.0
+                    if (jsonObject.has("ppl")) {
+                        returns = jsonObject.getDouble("ppl")
+                    } else if (jsonObject.has("result")) {
+                        returns = jsonObject.getDouble("result")
+                    }
+                    
+                    val sign = if (returns >= 0) "+" else ""
+                    t212Paint.color = if (returns >= 0) Color.GREEN else Color.RED
+                    t212Returns = "T212: $sign€%.2f".format(returns)
+                    invalidate()
+                } else {
+                    t212Returns = "T212 Err: ${connection.responseCode}"
+                    invalidate()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                t212Returns = "T212 Error"
+                invalidate()
+            }
+        }
+    }
+
     override fun render(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
         // Draw background
         canvas.drawColor(Color.BLACK)
@@ -175,6 +231,9 @@ class BtcWatchFaceRenderer(
 
         // BTC Price (Below)
         canvas.drawText(btcPrice, centerX, centerY + 75f, pricePaint)
+
+        // T212 Returns (Beneath BTC)
+        canvas.drawText(t212Returns, centerX, centerY + 125f, t212Paint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
