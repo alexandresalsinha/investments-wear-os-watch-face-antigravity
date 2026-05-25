@@ -27,6 +27,15 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import android.content.Context
+import android.content.SharedPreferences
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 class BtcWatchFaceService : WatchFaceService() {
 
@@ -64,7 +73,7 @@ class BtcWatchFaceRenderer(
     canvasType,
     16L,
     false
-) {
+), SensorEventListener {
     class SharedAssets : Renderer.SharedAssets {
         override fun onDestroy() {}
     }
@@ -114,10 +123,39 @@ class BtcWatchFaceRenderer(
         textAlign = Paint.Align.CENTER
     }
 
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    private val sharedPrefs: SharedPreferences = context.getSharedPreferences("watchface_prefs", Context.MODE_PRIVATE)
+    private var initialSteps: Float = sharedPrefs.getFloat("initialSteps", -1f)
+    private var lastDay: Int = sharedPrefs.getInt("lastDay", -1)
+    private var stepsText: String = "Steps: ..."
+    private val stepsPaint = Paint().apply {
+        color = Color.CYAN
+        textSize = 30f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+    }
+    private var isSensorRegistered = false
+
     init {
         scope.launch {
             watchState.isVisible.collect { isVisible ->
                 if (isVisible == true) {
+                    val hasPerm = ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+                    if (!hasPerm) {
+                        stepsText = "Steps: Need Perm"
+                        isSensorRegistered = false
+                        invalidate()
+                    } else {
+                        if (!isSensorRegistered && stepSensor != null) {
+                            isSensorRegistered = sensorManager.registerListener(this@BtcWatchFaceRenderer, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
+                        }
+                        if (stepsText == "Steps: ..." || stepsText == "Steps: Need Perm") {
+                            stepsText = "Steps: Walk..."
+                            invalidate()
+                        }
+                    }
+                    
                     fetchBtcPrice()
                     fetchT212Returns()
                 }
@@ -132,7 +170,34 @@ class BtcWatchFaceRenderer(
                 }
             }
         }
+        if (stepSensor == null) {
+            stepsText = "Steps: N/A"
+        }
     }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        if (event.sensor.type == Sensor.TYPE_STEP_COUNTER) {
+            val currentSteps = event.values[0]
+            val currentDay = ZonedDateTime.now().dayOfYear
+            
+            if (lastDay != currentDay) {
+                initialSteps = currentSteps
+                lastDay = currentDay
+                sharedPrefs.edit().putFloat("initialSteps", initialSteps).putInt("lastDay", lastDay).apply()
+            }
+            
+            if (initialSteps == -1f) {
+                initialSteps = currentSteps
+                sharedPrefs.edit().putFloat("initialSteps", initialSteps).apply()
+            }
+            
+            val todaySteps = currentSteps - initialSteps
+            stepsText = "Steps: ${todaySteps.toInt()}"
+            invalidate()
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     private suspend fun fetchBtcPrice() {
         withContext(Dispatchers.IO) {
@@ -234,6 +299,9 @@ class BtcWatchFaceRenderer(
 
         // T212 Returns (Beneath BTC)
         canvas.drawText(t212Returns, centerX, centerY + 125f, t212Paint)
+
+        // Steps (Beneath T212)
+        canvas.drawText(stepsText, centerX, centerY + 165f, stepsPaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
@@ -241,6 +309,7 @@ class BtcWatchFaceRenderer(
     }
 
     override fun onDestroy() {
+        sensorManager.unregisterListener(this)
         scope.cancel()
         super.onDestroy()
     }
