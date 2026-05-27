@@ -89,7 +89,7 @@ class BtcWatchFaceRenderer(
 
     private val timePaint = Paint().apply {
         color = Color.WHITE
-        textSize = 45f
+        textSize = 55f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
@@ -97,7 +97,7 @@ class BtcWatchFaceRenderer(
 
     private val datePaint = Paint().apply {
         color = Color.parseColor("#AAAAAA")
-        textSize = 20f
+        textSize = 24f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
@@ -105,7 +105,7 @@ class BtcWatchFaceRenderer(
 
     private val pricePaint = Paint().apply {
         color = Color.WHITE
-        textSize = 45f
+        textSize = 55f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
@@ -113,7 +113,7 @@ class BtcWatchFaceRenderer(
 
     private val labelPaint = Paint().apply {
         color = Color.parseColor("#F7931A")
-        textSize = 18f
+        textSize = 24f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
@@ -122,7 +122,7 @@ class BtcWatchFaceRenderer(
     private var t212Returns: String = "T212: Loading..."
     private val t212Paint = Paint().apply {
         color = Color.parseColor("#00E676")
-        textSize = 30f
+        textSize = 38f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
@@ -143,7 +143,7 @@ class BtcWatchFaceRenderer(
     private var stepsText: String = if (accumulatedSteps > 0f) "Steps: ${accumulatedSteps.toInt()}" else "Steps: ..."
     private val stepsPaint = Paint().apply {
         color = Color.parseColor("#03DAC5")
-        textSize = 24f
+        textSize = 32f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
@@ -309,7 +309,7 @@ class BtcWatchFaceRenderer(
         canvas.drawColor(Color.BLACK)
 
         val centerX = bounds.exactCenterX()
-        val startY = 80f
+        val startY = 75f
 
         // Time (Top, small)
         val timeText = zonedDateTime.format(timeFormatter)
@@ -317,25 +317,25 @@ class BtcWatchFaceRenderer(
 
         // Date (Beneath clock)
         val dateText = zonedDateTime.format(dateFormatter)
-        canvas.drawText(dateText, centerX, startY + 30f, datePaint)
+        canvas.drawText(dateText, centerX, startY + 35f, datePaint)
 
         // Divider 1
-        canvas.drawLine(centerX - 60f, startY + 50f, centerX + 60f, startY + 50f, dividerPaint)
+        canvas.drawLine(centerX - 70f, startY + 65f, centerX + 70f, startY + 65f, dividerPaint)
 
         // BTC Label
-        canvas.drawText("BTC / EUR", centerX, startY + 80f, labelPaint)
+        canvas.drawText("BTC / EUR", centerX, startY + 105f, labelPaint)
 
         // BTC Price (Below)
-        canvas.drawText(btcPrice, centerX, startY + 125f, pricePaint)
+        canvas.drawText(btcPrice, centerX, startY + 160f, pricePaint)
 
         // T212 Returns (Beneath BTC)
-        canvas.drawText(t212Returns, centerX, startY + 170f, t212Paint)
+        canvas.drawText(t212Returns, centerX, startY + 215f, t212Paint)
 
         // Divider 2
-        canvas.drawLine(centerX - 60f, startY + 195f, centerX + 60f, startY + 195f, dividerPaint)
+        canvas.drawLine(centerX - 70f, startY + 245f, centerX + 70f, startY + 245f, dividerPaint)
 
         // Steps (Beneath T212)
-        canvas.drawText(stepsText, centerX, startY + 230f, stepsPaint)
+        canvas.drawText(stepsText, centerX, startY + 290f, stepsPaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
