@@ -89,38 +89,49 @@ class BtcWatchFaceRenderer(
 
     private val timePaint = Paint().apply {
         color = Color.WHITE
-        textSize = 40f
+        textSize = 45f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
     }
 
     private val datePaint = Paint().apply {
-        color = Color.LTGRAY
-        textSize = 22f
+        color = Color.parseColor("#AAAAAA")
+        textSize = 20f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
     }
 
     private val pricePaint = Paint().apply {
-        color = Color.GREEN
-        textSize = 50f
+        color = Color.WHITE
+        textSize = 45f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
     }
 
     private val labelPaint = Paint().apply {
-        color = Color.LTGRAY
-        textSize = 24f
+        color = Color.parseColor("#F7931A")
+        textSize = 18f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
     }
 
     private var t212Returns: String = "T212: Loading..."
     private val t212Paint = Paint().apply {
-        color = Color.GREEN
-        textSize = 35f
+        color = Color.parseColor("#00E676")
+        textSize = 30f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+    }
+
+    private val dividerPaint = Paint().apply {
+        color = Color.parseColor("#333333")
+        strokeWidth = 2f
+        isAntiAlias = true
     }
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -131,10 +142,11 @@ class BtcWatchFaceRenderer(
     private var lastDay: Int = sharedPrefs.getInt("lastDay", -1)
     private var stepsText: String = if (accumulatedSteps > 0f) "Steps: ${accumulatedSteps.toInt()}" else "Steps: ..."
     private val stepsPaint = Paint().apply {
-        color = Color.CYAN
-        textSize = 30f
+        color = Color.parseColor("#03DAC5")
+        textSize = 24f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
     }
     private var isSensorRegistered = false
 
@@ -277,7 +289,7 @@ class BtcWatchFaceRenderer(
                     }
                     
                     val sign = if (returns >= 0) "+" else ""
-                    t212Paint.color = if (returns >= 0) Color.GREEN else Color.RED
+                    t212Paint.color = if (returns >= 0) Color.parseColor("#00E676") else Color.parseColor("#FF5252")
                     t212Returns = "T212: $sign€%.2f".format(returns)
                     invalidate()
                 } else {
@@ -305,19 +317,25 @@ class BtcWatchFaceRenderer(
 
         // Date (Beneath clock)
         val dateText = zonedDateTime.format(dateFormatter)
-        canvas.drawText(dateText, centerX, startY + 40f, datePaint)
+        canvas.drawText(dateText, centerX, startY + 30f, datePaint)
+
+        // Divider 1
+        canvas.drawLine(centerX - 60f, startY + 50f, centerX + 60f, startY + 50f, dividerPaint)
 
         // BTC Label
         canvas.drawText("BTC / EUR", centerX, startY + 80f, labelPaint)
 
         // BTC Price (Below)
-        canvas.drawText(btcPrice, centerX, startY + 130f, pricePaint)
+        canvas.drawText(btcPrice, centerX, startY + 125f, pricePaint)
 
         // T212 Returns (Beneath BTC)
-        canvas.drawText(t212Returns, centerX, startY + 180f, t212Paint)
+        canvas.drawText(t212Returns, centerX, startY + 170f, t212Paint)
+
+        // Divider 2
+        canvas.drawLine(centerX - 60f, startY + 195f, centerX + 60f, startY + 195f, dividerPaint)
 
         // Steps (Beneath T212)
-        canvas.drawText(stepsText, centerX, startY + 220f, stepsPaint)
+        canvas.drawText(stepsText, centerX, startY + 230f, stepsPaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
