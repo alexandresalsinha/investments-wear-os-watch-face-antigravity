@@ -148,6 +148,15 @@ class BtcWatchFaceRenderer(
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
     }
+
+    private var weatherText: String = "Temp: Loading..."
+    private val tempPaint = Paint().apply {
+        color = Color.parseColor("#FFCA28")
+        textSize = 28f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+    }
     private var isSensorRegistered = false
 
     init {
@@ -171,6 +180,7 @@ class BtcWatchFaceRenderer(
                     
                     fetchBtcPrice()
                     fetchT212Returns()
+                    fetchWeather()
                 }
             }
         }
@@ -180,6 +190,7 @@ class BtcWatchFaceRenderer(
                 if (watchState.isVisible.value == true) {
                     fetchBtcPrice()
                     fetchT212Returns()
+                    fetchWeather()
                 }
             }
         }
@@ -304,12 +315,79 @@ class BtcWatchFaceRenderer(
         }
     }
 
+    private suspend fun fetchWeather() {
+        withContext(Dispatchers.IO) {
+            try {
+                // 1. Get Geo IP
+                val geoUrl = URL("https://get.geojs.io/v1/ip/geo.json")
+                val geoConn = geoUrl.openConnection() as HttpURLConnection
+                geoConn.requestMethod = "GET"
+                geoConn.connectTimeout = 5000
+                geoConn.readTimeout = 5000
+                
+                if (geoConn.responseCode != HttpURLConnection.HTTP_OK) {
+                    weatherText = "Geo Err: ${geoConn.responseCode}"
+                    invalidate()
+                    return@withContext
+                }
+                
+                val geoReader = BufferedReader(InputStreamReader(geoConn.inputStream))
+                val geoResponse = geoReader.readText()
+                geoReader.close()
+                
+                val geoJson = JSONObject(geoResponse)
+                val lat = geoJson.getString("latitude")
+                val lon = geoJson.getString("longitude")
+                
+                // 2. Get Weather
+                val weatherUrl = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m&hourly=temperature_2m&forecast_days=2")
+                val weatherConn = weatherUrl.openConnection() as HttpURLConnection
+                weatherConn.requestMethod = "GET"
+                weatherConn.connectTimeout = 5000
+                weatherConn.readTimeout = 5000
+                
+                if (weatherConn.responseCode == HttpURLConnection.HTTP_OK) {
+                    val weatherReader = BufferedReader(InputStreamReader(weatherConn.inputStream))
+                    val weatherResponse = weatherReader.readText()
+                    weatherReader.close()
+                    
+                    val weatherJson = JSONObject(weatherResponse)
+                    val current = weatherJson.getJSONObject("current")
+                    val currentTemp = current.getDouble("temperature_2m")
+                    val currentTime = current.getString("time")
+                    
+                    val hourly = weatherJson.getJSONObject("hourly")
+                    val timeArray = hourly.getJSONArray("time")
+                    val tempArray = hourly.getJSONArray("temperature_2m")
+                    
+                    var nextTemp = currentTemp
+                    for (i in 0 until timeArray.length()) {
+                        if (timeArray.getString(i) == currentTime && i + 1 < timeArray.length()) {
+                            nextTemp = tempArray.getDouble(i + 1)
+                            break
+                        }
+                    }
+                    
+                    weatherText = String.format("%.1f°C ➔ %.1f°C", currentTemp, nextTemp)
+                    invalidate()
+                } else {
+                    weatherText = "Wea Err: ${weatherConn.responseCode}"
+                    invalidate()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                weatherText = "Weather Error"
+                invalidate()
+            }
+        }
+    }
+
     override fun render(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
         // Draw background
         canvas.drawColor(Color.BLACK)
 
         val centerX = bounds.exactCenterX()
-        val startY = 75f
+        val startY = 50f
 
         // Time (Top, small)
         val timeText = zonedDateTime.format(timeFormatter)
@@ -317,25 +395,31 @@ class BtcWatchFaceRenderer(
 
         // Date (Beneath clock)
         val dateText = zonedDateTime.format(dateFormatter)
-        canvas.drawText(dateText, centerX, startY + 35f, datePaint)
+        canvas.drawText(dateText, centerX, startY + 30f, datePaint)
 
         // Divider 1
-        canvas.drawLine(centerX - 70f, startY + 65f, centerX + 70f, startY + 65f, dividerPaint)
+        canvas.drawLine(centerX - 70f, startY + 55f, centerX + 70f, startY + 55f, dividerPaint)
 
         // BTC Label
-        canvas.drawText("BTC / EUR", centerX, startY + 105f, labelPaint)
+        canvas.drawText("BTC / EUR", centerX, startY + 90f, labelPaint)
 
         // BTC Price (Below)
-        canvas.drawText(btcPrice, centerX, startY + 160f, pricePaint)
+        canvas.drawText(btcPrice, centerX, startY + 140f, pricePaint)
 
         // T212 Returns (Beneath BTC)
-        canvas.drawText(t212Returns, centerX, startY + 215f, t212Paint)
+        canvas.drawText(t212Returns, centerX, startY + 190f, t212Paint)
 
         // Divider 2
-        canvas.drawLine(centerX - 70f, startY + 245f, centerX + 70f, startY + 245f, dividerPaint)
+        canvas.drawLine(centerX - 70f, startY + 220f, centerX + 70f, startY + 220f, dividerPaint)
 
         // Steps (Beneath T212)
-        canvas.drawText(stepsText, centerX, startY + 290f, stepsPaint)
+        canvas.drawText(stepsText, centerX, startY + 260f, stepsPaint)
+
+        // Divider 3
+        canvas.drawLine(centerX - 70f, startY + 290f, centerX + 70f, startY + 290f, dividerPaint)
+
+        // Weather
+        canvas.drawText(weatherText, centerX, startY + 330f, tempPaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
