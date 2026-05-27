@@ -281,27 +281,27 @@ class BtcWatchFaceRenderer(
         canvas.drawColor(Color.BLACK)
 
         val centerX = bounds.exactCenterX()
-        val centerY = bounds.exactCenterY()
+        val startY = 80f
 
         // Time (Top, small)
         val timeText = zonedDateTime.format(timeFormatter)
-        canvas.drawText(timeText, centerX, centerY - 55f, timePaint)
+        canvas.drawText(timeText, centerX, startY, timePaint)
 
         // Date (Beneath clock)
         val dateText = zonedDateTime.format(dateFormatter)
-        canvas.drawText(dateText, centerX, centerY - 15f, datePaint)
+        canvas.drawText(dateText, centerX, startY + 40f, datePaint)
 
         // BTC Label
-        canvas.drawText("BTC / EUR", centerX, centerY + 25f, labelPaint)
+        canvas.drawText("BTC / EUR", centerX, startY + 80f, labelPaint)
 
         // BTC Price (Below)
-        canvas.drawText(btcPrice, centerX, centerY + 75f, pricePaint)
+        canvas.drawText(btcPrice, centerX, startY + 130f, pricePaint)
 
         // T212 Returns (Beneath BTC)
-        canvas.drawText(t212Returns, centerX, centerY + 125f, t212Paint)
+        canvas.drawText(t212Returns, centerX, startY + 180f, t212Paint)
 
         // Steps (Beneath T212)
-        canvas.drawText(stepsText, centerX, centerY + 165f, stepsPaint)
+        canvas.drawText(stepsText, centerX, startY + 220f, stepsPaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
