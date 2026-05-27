@@ -126,9 +126,10 @@ class BtcWatchFaceRenderer(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
     private val sharedPrefs: SharedPreferences = context.getSharedPreferences("watchface_prefs", Context.MODE_PRIVATE)
-    private var initialSteps: Float = sharedPrefs.getFloat("initialSteps", -1f)
+    private var accumulatedSteps: Float = sharedPrefs.getFloat("accumulatedSteps", 0f)
+    private var lastSensorSteps: Float = sharedPrefs.getFloat("lastSensorSteps", -1f)
     private var lastDay: Int = sharedPrefs.getInt("lastDay", -1)
-    private var stepsText: String = "Steps: ..."
+    private var stepsText: String = if (accumulatedSteps > 0f) "Steps: ${accumulatedSteps.toInt()}" else "Steps: ..."
     private val stepsPaint = Paint().apply {
         color = Color.CYAN
         textSize = 30f
@@ -177,22 +178,37 @@ class BtcWatchFaceRenderer(
 
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_STEP_COUNTER) {
-            val currentSteps = event.values[0]
-            val currentDay = ZonedDateTime.now().dayOfYear
+            val currentSensorSteps = event.values[0]
+            
+            // Subtract 9 hours so that 9 AM becomes 0 AM (midnight) of a new "shift day"
+            val adjustedNow = ZonedDateTime.now().minusHours(9)
+            val currentDay = adjustedNow.dayOfYear + (adjustedNow.year * 1000)
             
             if (lastDay != currentDay) {
-                initialSteps = currentSteps
+                accumulatedSteps = 0f
                 lastDay = currentDay
-                sharedPrefs.edit().putFloat("initialSteps", initialSteps).putInt("lastDay", lastDay).apply()
             }
             
-            if (initialSteps == -1f) {
-                initialSteps = currentSteps
-                sharedPrefs.edit().putFloat("initialSteps", initialSteps).apply()
+            if (lastSensorSteps == -1f) {
+                lastSensorSteps = currentSensorSteps
             }
             
-            val todaySteps = currentSteps - initialSteps
-            stepsText = "Steps: ${todaySteps.toInt()}"
+            var delta = currentSensorSteps - lastSensorSteps
+            if (delta < 0) {
+                // Device likely rebooted, so the sensor reset to 0
+                delta = currentSensorSteps
+            }
+            
+            accumulatedSteps += delta
+            lastSensorSteps = currentSensorSteps
+            
+            sharedPrefs.edit()
+                .putFloat("accumulatedSteps", accumulatedSteps)
+                .putFloat("lastSensorSteps", lastSensorSteps)
+                .putInt("lastDay", lastDay)
+                .apply()
+            
+            stepsText = "Steps: ${accumulatedSteps.toInt()}"
             invalidate()
         }
     }
