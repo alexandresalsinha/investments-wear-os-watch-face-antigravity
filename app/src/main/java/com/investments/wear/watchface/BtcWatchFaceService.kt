@@ -318,33 +318,13 @@ class BtcWatchFaceRenderer(
     private suspend fun fetchWeather() {
         withContext(Dispatchers.IO) {
             try {
-                // 1. Get Geo IP
-                val geoUrl = URL("https://get.geojs.io/v1/ip/geo.json")
-                val geoConn = geoUrl.openConnection() as HttpURLConnection
-                geoConn.requestMethod = "GET"
-                geoConn.connectTimeout = 5000
-                geoConn.readTimeout = 5000
-                
-                if (geoConn.responseCode != HttpURLConnection.HTTP_OK) {
-                    weatherText = "Geo Err: ${geoConn.responseCode}"
-                    invalidate()
-                    return@withContext
-                }
-                
-                val geoReader = BufferedReader(InputStreamReader(geoConn.inputStream))
-                val geoResponse = geoReader.readText()
-                geoReader.close()
-                
-                val geoJson = JSONObject(geoResponse)
-                val lat = geoJson.getString("latitude")
-                val lon = geoJson.getString("longitude")
-                
-                // 2. Get Weather
-                val weatherUrl = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m&hourly=temperature_2m&forecast_days=2")
+                // Use wttr.in for specific location without API key
+                val weatherUrl = URL("https://wttr.in/Charneca+da+Caparica,+Almada,+Portugal?format=j1")
                 val weatherConn = weatherUrl.openConnection() as HttpURLConnection
                 weatherConn.requestMethod = "GET"
                 weatherConn.connectTimeout = 5000
                 weatherConn.readTimeout = 5000
+                weatherConn.setRequestProperty("User-Agent", "Mozilla/5.0")
                 
                 if (weatherConn.responseCode == HttpURLConnection.HTTP_OK) {
                     val weatherReader = BufferedReader(InputStreamReader(weatherConn.inputStream))
@@ -352,23 +332,13 @@ class BtcWatchFaceRenderer(
                     weatherReader.close()
                     
                     val weatherJson = JSONObject(weatherResponse)
-                    val current = weatherJson.getJSONObject("current")
-                    val currentTemp = current.getDouble("temperature_2m")
-                    val currentTime = current.getString("time")
+                    val currentCondition = weatherJson.getJSONArray("current_condition").getJSONObject(0)
+                    val currentTemp = currentCondition.getString("temp_C")
                     
-                    val hourly = weatherJson.getJSONObject("hourly")
-                    val timeArray = hourly.getJSONArray("time")
-                    val tempArray = hourly.getJSONArray("temperature_2m")
+                    val weatherArray = weatherJson.getJSONArray("weather").getJSONObject(0)
+                    val maxTemp = weatherArray.getString("maxtempC")
                     
-                    var nextTemp = currentTemp
-                    for (i in 0 until timeArray.length()) {
-                        if (timeArray.getString(i) == currentTime && i + 1 < timeArray.length()) {
-                            nextTemp = tempArray.getDouble(i + 1)
-                            break
-                        }
-                    }
-                    
-                    weatherText = String.format("%.1f°C ➔ %.1f°C", currentTemp, nextTemp)
+                    weatherText = "${currentTemp}°C ➔ ${maxTemp}°C"
                     invalidate()
                 } else {
                     weatherText = "Wea Err: ${weatherConn.responseCode}"
