@@ -157,6 +157,15 @@ class BtcWatchFaceRenderer(
         textAlign = Paint.Align.CENTER
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
     }
+
+    private var uvText: String = "UV: Loading..."
+    private val uvPaint = Paint().apply {
+        color = Color.parseColor("#E040FB")
+        textSize = 24f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+    }
     private var isSensorRegistered = false
 
     init {
@@ -184,12 +193,21 @@ class BtcWatchFaceRenderer(
                 }
             }
         }
+        // Loop for BTC and T212 - Every 5 seconds
         scope.launch {
             while (true) {
-                delay(5 * 60 * 1000L) // Fetch every 5 minutes
+                delay(5000L)
                 if (watchState.isVisible.value == true) {
                     fetchBtcPrice()
                     fetchT212Returns()
+                }
+            }
+        }
+        // Loop for Weather - Every 10 minutes
+        scope.launch {
+            while (true) {
+                delay(10 * 60 * 1000L)
+                if (watchState.isVisible.value == true) {
                     fetchWeather()
                 }
             }
@@ -334,19 +352,23 @@ class BtcWatchFaceRenderer(
                     val weatherJson = JSONObject(weatherResponse)
                     val currentCondition = weatherJson.getJSONArray("current_condition").getJSONObject(0)
                     val currentTemp = currentCondition.getString("temp_C")
+                    val currentUv = currentCondition.optString("uvIndex", "N/A")
                     
                     val weatherArray = weatherJson.getJSONArray("weather").getJSONObject(0)
                     val maxTemp = weatherArray.getString("maxtempC")
                     
                     weatherText = "${currentTemp}°C ➔ ${maxTemp}°C"
+                    uvText = "UV Index: $currentUv"
                     invalidate()
                 } else {
                     weatherText = "Wea Err: ${weatherConn.responseCode}"
+                    uvText = "UV Err"
                     invalidate()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 weatherText = "Weather Error"
+                uvText = "UV Error"
                 invalidate()
             }
         }
@@ -390,6 +412,9 @@ class BtcWatchFaceRenderer(
 
         // Weather
         canvas.drawText(weatherText, centerX, startY + 330f, tempPaint)
+
+        // UV Index
+        canvas.drawText(uvText, centerX, startY + 360f, uvPaint)
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
