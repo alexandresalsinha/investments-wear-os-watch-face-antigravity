@@ -193,12 +193,20 @@ class BtcWatchFaceRenderer(
                 }
             }
         }
-        // Loop for BTC and T212 - Every 5 seconds
+        // Loop for BTC - Every 5 seconds
         scope.launch {
             while (true) {
                 delay(5000L)
                 if (watchState.isVisible.value == true) {
                     fetchBtcPrice()
+                }
+            }
+        }
+        // Loop for Trading 212 - Every 2 minutes
+        scope.launch {
+            while (true) {
+                delay(2 * 60 * 1000L)
+                if (watchState.isVisible.value == true) {
                     fetchT212Returns()
                 }
             }
